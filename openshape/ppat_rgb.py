@@ -94,7 +94,7 @@ class PointPatchTransformer(nn.Module):
         self.sa.npoint = self.patches
         if self.training:
             self.sa.npoint -= self.patch_dropout
-        # print("input", features.shape)
+        print("input", features.shape)
         centroids, feature = self.sa(features[:, :3], features)
         # print("f", feature.shape, 'c', centroids.shape)
         x = self.lift(torch.cat([centroids, feature], dim=1))
@@ -108,6 +108,36 @@ class PointPatchTransformer(nn.Module):
         return x[:, 0]
 
 
+class PatchTokenExtractor(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+        # 获取内部PointPatchTransformer模型
+        if hasattr(model, 'ppat'):
+            self.ppat = model.ppat
+        else:
+            self.ppat = model
+            
+    def forward(self, features):
+        # 访问模型的内部变量
+        self.sa = self.ppat.sa
+        centroids, feature = self.sa(features[:, :3], features)
+        x = self.ppat.lift(torch.cat([centroids, feature], dim=1))
+        
+        # 添加CLS token
+        x = torch.cat([self.ppat.cls_token.unsqueeze(0).repeat(x.size(0), 1, 1), x], dim=1)
+        centroids = torch.cat([centroids.new_zeros(centroids.size(0), 3, 1), centroids], dim=-1)
+        
+        centroid_delta = centroids.unsqueeze(-1) - centroids.unsqueeze(-2)
+        x = self.ppat.transformer(x, centroid_delta)
+        
+        # 返回所有tokens，而不仅仅是CLS token
+        return {
+            'cls_token': x[:, 0],       # CLS token [B, 512]
+            'patch_tokens': x[:, 1:],   # Patch tokens [B, N, 512] 
+            'centroids': centroids      # Patch中心点坐标 [B, 3, N+1]
+        }
+    
 class Projected(nn.Module):
     def __init__(self, ppat, proj) -> None:
         super().__init__()

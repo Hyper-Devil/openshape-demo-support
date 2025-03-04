@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
-from .ppat_rgb import Projected, PointPatchTransformer
+from .ppat_rgb import Projected, PointPatchTransformer, PatchTokenExtractor
 
 
 def module(state_dict: dict, name):
