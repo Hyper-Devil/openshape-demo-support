@@ -10,6 +10,10 @@ metrics:
 
 First, you have to install a recent version of [torch](//pytorch.org/get-started/locally/) and [dgl](//www.dgl.ai/pages/start.html).
 
+```bash
+pip install psutil --upgrade --ignore-installed psutil
+```
+
 Then install the following extra dependencies:
 ```bash
 pip install torch.redstone einops huggingface_hub
